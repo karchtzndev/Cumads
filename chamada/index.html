@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Cumad's Grill — Painel de Chamada</title>
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Lobster&family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pitch:#fbf3df;
+    --char:#fffaf0;
+    --cream:#391b14;
+    --ember:#b03a22;
+    --mustard:#d9a520;
+    --green:#2e8b4e;
+    --line:rgba(57,27,20,0.1);
+  }
+  *{margin:0; padding:0; box-sizing:border-box;}
+  body{
+    background:var(--pitch); color:var(--cream);
+    font-family:'Montserrat',sans-serif; height:100vh; overflow:hidden;
+  }
+
+  /* ---------- TELA DE INÍCIO (libera o som) ---------- */
+  .start-screen{
+    position:fixed; inset:0; z-index:100; background:var(--pitch);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px; text-align:center; padding:30px;
+  }
+  .start-screen img{width:130px; height:130px; border-radius:50%; border:4px solid var(--ember); object-fit:cover;}
+  .start-screen h1{font-family:'Alfa Slab One',sans-serif; font-size:clamp(30px,5vw,52px); color:var(--ember); letter-spacing:1px;}
+  .start-screen p{font-size:clamp(15px,2vw,20px); color:rgba(57,27,20,0.65); max-width:560px; line-height:1.6;}
+  .start-btn{
+    background:var(--ember); color:var(--pitch); border:none; border-radius:999px;
+    padding:22px 60px; font-size:clamp(18px,2.5vw,26px); font-weight:900; cursor:pointer;
+    font-family:'Montserrat',sans-serif; transition:transform .2s;
+  }
+  .start-btn:hover{transform:scale(1.05);}
+
+  /* ---------- LAYOUT PRINCIPAL ---------- */
+  .tv{display:grid; grid-template-columns:1fr 380px; height:100vh;}
+
+  /* ---------- CHAMADA ATUAL ---------- */
+  .stage{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:40px; position:relative; overflow:hidden;
+  }
+  .brand{
+    position:absolute; top:32px; left:40px; display:flex; align-items:center; gap:16px;
+    text-decoration:none; color:inherit; padding:8px 14px 8px 8px; border-radius:999px;
+    transition:background .2s;
+  }
+  .brand:hover{background:rgba(176,58,34,0.12);}
+  .brand img{width:64px; height:64px; border-radius:50%; border:3px solid var(--ember); object-fit:cover;}
+  .brand-txt small{display:block; font-size:12px; letter-spacing:4px; color:var(--mustard); font-weight:700;}
+  .brand-txt strong{font-family:'Alfa Slab One',sans-serif; font-size:26px; color:var(--cream); line-height:1;}
+
+  .clock{position:absolute; top:36px; right:40px; font-family:'Alfa Slab One',sans-serif; font-size:30px; color:rgba(57,27,20,0.4);}
+
+  .idle{text-align:center;}
+  .idle .idle-icon{font-size:clamp(70px,10vw,120px); margin-bottom:20px; opacity:0.35;}
+  .idle h2{font-family:'Alfa Slab One',sans-serif; font-size:clamp(26px,4vw,46px); color:rgba(57,27,20,0.4);}
+
+  .call-card{text-align:center; width:100%; animation:slamIn .5s cubic-bezier(.2,1.4,.4,1);}
+  .call-label{
+    font-size:clamp(18px,2.6vw,30px); letter-spacing:8px; color:var(--mustard);
+    font-weight:900; margin-bottom:10px; text-transform:uppercase;
+  }
+  .call-number{
+    font-family:'Alfa Slab One',sans-serif; line-height:0.9; color:var(--ember);
+    font-size:clamp(140px,26vw,380px); text-shadow:0 0 60px rgba(176,58,34,0.45);
+  }
+  .call-name{
+    font-family:'Alfa Slab One',sans-serif; font-size:clamp(38px,6vw,86px);
+    color:var(--cream); margin-top:6px; line-height:1.1; word-break:break-word;
+  }
+  .call-type{
+    display:inline-block; margin-top:22px; background:var(--green); color:#ffffff;
+    padding:14px 40px; border-radius:999px; font-size:clamp(18px,2.4vw,30px); font-weight:900;
+  }
+  .call-type.mesa{background:var(--mustard); color:var(--pitch);}
+  .call-type.entrega{background:#4a9dd4; color:#04202f;}
+
+  @keyframes slamIn{
+    0%{transform:scale(0.4) rotate(-4deg); opacity:0;}
+    70%{transform:scale(1.06) rotate(1deg);}
+    100%{transform:scale(1) rotate(0); opacity:1;}
+  }
+
+  /* flash de destaque ao chamar */
+  .flash{position:fixed; inset:0; background:var(--ember); z-index:60; pointer-events:none; opacity:0;}
+  .flash.go{animation:flashPulse 1.1s ease-out;}
+  @keyframes flashPulse{
+    0%{opacity:0.85;} 25%{opacity:0;} 45%{opacity:0.6;} 70%{opacity:0;} 85%{opacity:0.35;} 100%{opacity:0;}
+  }
+
+  /* barra de tempo da chamada */
+  .timer-bar{position:absolute; bottom:0; left:0; height:8px; background:var(--ember); width:100%;}
+  .timer-bar.run{animation:shrink linear forwards;}
+  @keyframes shrink{from{width:100%;} to{width:0;}}
+
+  /* fila aguardando */
+  .queue-alert{
+    position:absolute; bottom:34px; left:50%; transform:translateX(-50%);
+    background:var(--mustard); color:var(--pitch); padding:10px 26px; border-radius:999px;
+    font-weight:900; font-size:clamp(14px,1.6vw,19px); display:none;
+  }
+
+  /* ---------- ÚLTIMOS CHAMADOS ---------- */
+  .side{
+    background:var(--char); border-left:1px solid var(--line);
+    display:flex; flex-direction:column; padding:28px 22px;
+  }
+  .side h3{
+    font-family:'Alfa Slab One',sans-serif; font-size:22px; color:var(--mustard);
+    letter-spacing:1px; margin-bottom:20px; text-align:center;
+    padding-bottom:16px; border-bottom:2px solid var(--line);
+  }
+  .history{flex-grow:1; overflow:hidden; display:flex; flex-direction:column; gap:12px;}
+  .hist-item{
+    background:var(--pitch); border:1px solid var(--line); border-radius:14px;
+    padding:16px 18px; display:flex; align-items:center; gap:16px;
+    animation:slideIn .4s ease-out;
+  }
+  .hist-item.recent{border-color:var(--ember); background:rgba(176,58,34,0.09);}
+  .hist-num{
+    font-family:'Alfa Slab One',sans-serif; font-size:38px; color:var(--ember); line-height:1; min-width:70px;
+  }
+  .hist-info{flex-grow:1; min-width:0;}
+  .hist-info strong{display:block; font-size:18px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .hist-info span{font-size:13px; color:rgba(57,27,20,0.5);}
+  .hist-empty{text-align:center; color:rgba(57,27,20,0.3); font-size:15px; padding:40px 0;}
+  @keyframes slideIn{from{opacity:0; transform:translateX(24px);} to{opacity:1; transform:translateX(0);}}
+
+  .side-foot{
+    margin-top:18px; padding-top:16px; border-top:1px solid var(--line);
+    text-align:center; font-size:13px; color:rgba(57,27,20,0.35);
+  }
+  .conn{display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--green); margin-right:7px;}
+  .conn.off{background:#d0342c;}
+
+  /* ---------- TELAS MENORES ---------- */
+  @media(max-width:1100px){
+    .tv{grid-template-columns:1fr 300px;}
+    .hist-num{font-size:30px; min-width:56px;}
+  }
+  @media(max-width:800px){
+    .tv{grid-template-columns:1fr; grid-template-rows:1fr auto;}
+    .side{border-left:none; border-top:1px solid var(--line); max-height:38vh;}
+    .history{flex-direction:row; overflow-x:auto;}
+    .hist-item{min-width:200px;}
+    .brand{position:static; justify-content:center; margin-bottom:20px;}
+    .clock{top:14px; right:16px; font-size:20px;}
+  }
+</style>
+
+<style id="tema-cumads">
+/* =====================================================================
+   TEMA CUMAD'S GRILL — creme, vermelho-brasa e dourado, casando com o
+   cardápio impresso (faixas vermelhas pinceladas com estrela dourada).
+   ===================================================================== */
+:root{
+  --pitch:#fbf3df; --char:#fffaf0; --cream:#391b14;
+  --ember:#b03a22; --ember-deep:#6e1f12; --tomato:#d0342c; --mustard:#a87412; --green:#2e8b4e;
+  --line:rgba(57,27,20,0.12);
+  --red:#a8341f; --red-bright:#c44a2a; --gold:#f2c94c; --gold-deep:#d9a520; --paper:#fbf3df; --ink:#391b14;
+  --brush:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 80' preserveAspectRatio='none'%3E%3Cpath fill='%23a8341f' d='M10 16 L34 9 L72 13 L118 6 L176 11 L236 5 L298 10 L352 6 L394 13 L386 25 L398 38 L389 52 L396 68 L356 75 L296 70 L236 77 L172 71 L112 76 L54 70 L8 75 L17 61 L3 47 L14 33 Z'/%3E%3Cpath fill='%23c44a2a' opacity='.55' d='M24 22 L120 17 L250 19 L372 16 L366 30 L240 28 L110 31 L30 33 Z'/%3E%3Cpath fill='%236e1f12' opacity='.35' d='M30 58 L140 55 L270 60 L380 56 L376 66 L260 69 L130 66 L26 68 Z'/%3E%3C/svg%3E");
+}
+body{
+  background:
+    radial-gradient(1100px 520px at 100% -10%, rgba(242,201,76,0.12), transparent 60%),
+    radial-gradient(900px 600px at -10% 110%, rgba(168,52,31,0.07), transparent 60%),
+    var(--paper);
+  color:var(--ink);
+}
+.grain{opacity:0.07; mix-blend-mode:multiply;}
+::selection{background:var(--red); color:#fff6e6;}
+</style>
+</head>
+<body>
+
+<!-- Libera o som (navegador exige um toque antes de tocar áudio) -->
+<div class="start-screen" id="startScreen">
+  <img src="mascot.jpg" alt="Cumad's Grill">
+  <h1>PAINEL DE CHAMADA</h1>
+  <p>Toque no botão para iniciar. Deixe esta tela aberta na TV — os pedidos prontos aparecem aqui com aviso sonoro.</p>
+  <button class="start-btn" id="startBtn">▶ INICIAR PAINEL</button>
+</div>
+
+<div class="flash" id="flash"></div>
+
+<div class="tv">
+  <div class="stage">
+    <a href="../gerencial/" class="brand" title="Voltar ao painel">
+      <img src="mascot.jpg" alt="">
+      <div class="brand-txt">
+        <small>CUMAD'S</small>
+        <strong>Grill</strong>
+      </div>
+    </a>
+    <div class="clock" id="clock">--:--</div>
+
+    <div id="stageContent">
+      <div class="idle">
+        <div class="idle-icon">🍢</div>
+        <h2>Aguardando pedidos...</h2>
+      </div>
+    </div>
+
+    <div class="queue-alert" id="queueAlert"></div>
+    <div class="timer-bar" id="timerBar"></div>
+  </div>
+
+  <div class="side">
+    <h3>ÚLTIMOS CHAMADOS</h3>
+    <div class="history" id="history">
+      <div class="hist-empty">Nenhuma chamada ainda</div>
+    </div>
+    <div class="side-foot">
+      <span class="conn" id="conn"></span><span id="connTxt">Conectado</span>
+    </div>
+  </div>
+</div>
+
+<div id="falhaConexao" style="display:none; position:fixed; inset:0; z-index:300; background:#fbf3df; align-items:center; justify-content:center; padding:24px;">
+  <div style="max-width:420px; text-align:center;">
+    <div style="font-size:60px; margin-bottom:16px;">📡</div>
+    <strong style="display:block; font-family:'Alfa Slab One',sans-serif; font-size:24px; color:#b03a22; margin-bottom:12px;">Não conseguimos conectar</strong>
+    <p style="font-size:15px; color:rgba(57,27,20,0.65); line-height:1.6; margin-bottom:24px;">Verifique a internet da TV e tente de novo.</p>
+    <button onclick="window.location.reload()" style="background:#b03a22; color:#fbf3df; border:none; border-radius:999px; padding:16px 36px; font-size:16px; font-weight:900; cursor:pointer;">🔄 Tentar novamente</button>
+  </div>
+</div>
+<script>
+  window.__firebaseOk = false;
+  window.__vigiaFirebase = setTimeout(function(){
+    if(!window.__firebaseOk){
+      var el = document.getElementById('falhaConexao');
+      if(el) el.style.display = 'flex';
+    }
+  }, 9000);
+</script>
+<script>
+  // Capturador de erros — grava na aba 🐞 Erros do painel
+  (function(){
+    var jaEnviados = {};
+    function enviar(msg, detalhe){
+      try{
+        if(!window.firebase || !firebase.firestore) return;
+        var chave = String(msg).slice(0,120);
+        if(jaEnviados[chave]) return;
+        jaEnviados[chave] = true;
+        firebase.firestore().collection('errorLog').add({
+          mensagem: String(msg).slice(0,500),
+          detalhe: String(detalhe||'').slice(0,500),
+          pagina: 'tv',
+          url: String(location.href).slice(0,200),
+          navegador: String(navigator.userAgent).slice(0,200),
+          plataforma: String(navigator.platform||''),
+          toque: navigator.maxTouchPoints||0,
+          modoComputador: (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1),
+          tela: (window.innerWidth||0)+'x'+(window.innerHeight||0),
+          online: navigator.onLine,
+          quando: new Date().toISOString(),
+          // erro de 30 dias atrás não ajuda mais ninguém a depurar nada
+          expiraEm: firebase.firestore.Timestamp.fromMillis(Date.now() + 30*86400000)
+        }).catch(function(){});
+      }catch(e){}
+    }
+    window.addEventListener('error', function(e){
+      var local = 'Arquivo: '+(e.filename||'?')+' · Linha: '+(e.lineno||'?')+':'+(e.colno||'?');
+      enviar((e.message||'Erro desconhecido')+' | '+local, local);
+    });
+    window.addEventListener('unhandledrejection', function(e){
+      var r = e.reason;
+      enviar('Promessa rejeitada: '+(r && r.message ? r.message : String(r)), '');
+    });
+  })();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js"
+        onerror="document.getElementById('falhaConexao').style.display='flex'"></script>
+<script src="/supa-firebase.js?v=3"
+        onerror="document.getElementById('falhaConexao').style.display='flex'"></script>
+<script>
+  // Banco de dados: Supabase (projeto cumads-grill). A chave "publishable"
+  // é pública por natureza — quem protege os dados são as regras no banco.
+  const firebaseConfig = {
+    supabaseUrl: "https://usgykpjvptlxhmspsadn.supabase.co",
+    supabaseKey: "sb_publishable_5SM2AKsMK66DfMQ7SPGTGA_1ID4IU28"
+  };
+  let db;
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    window.__firebaseOk = true;
+    clearTimeout(window.__vigiaFirebase);
+    const falhaEl = document.getElementById('falhaConexao');
+    if(falhaEl) falhaEl.style.display = 'none';
+  }catch(e){
+    console.error('Falha ao iniciar o Firebase:', e);
+    const falhaEl = document.getElementById('falhaConexao');
+    if(falhaEl) falhaEl.style.display = 'flex';
+    throw e;
+  }
+</script>
+<script>
+(function(){
+  "use strict";
+
+  /* ============ CONFIGURAÇÃO ============ */
+  const TEMPO_NA_TELA = 14000;  // quanto cada chamada fica em destaque (ms)
+  const MAX_HISTORICO = 6;      // quantos aparecem em "últimos chamados"
+
+  /* ============ ESTADO ============ */
+  let filaEspera = [];      // chamadas aguardando a vez de aparecer
+  let historico = [];       // já exibidas
+  let exibindo = false;
+  let conhecidas = null;    // null = primeira carga (não toca alarme)
+  let audioCtx = null;
+
+  /* ============ SOM ============ */
+  function initAudio(){
+    if(!audioCtx){
+      try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){}
+    }
+    if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  // Toque de chamada: 3 notas ascendentes + repique, bem audível no salão
+  function tocarChamada(){
+    initAudio();
+    if(!audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    const notas = [
+      {f:784, t:0.00, d:0.22},  // Sol
+      {f:988, t:0.20, d:0.22},  // Si
+      {f:1319,t:0.40, d:0.45},  // Mi agudo
+      {f:1319,t:0.95, d:0.20},
+      {f:1319,t:1.25, d:0.35}
+    ];
+    notas.forEach(n => {
+      // duas ondas juntas dão um timbre de sino mais encorpado
+      [['triangle',0.30],['sine',0.22]].forEach(([tipo, vol]) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = tipo;
+        osc.frequency.setValueAtTime(n.f, t0 + n.t);
+        gain.gain.setValueAtTime(0.0001, t0 + n.t);
+        gain.gain.exponentialRampToValueAtTime(vol, t0 + n.t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + n.t + n.d);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(t0 + n.t);
+        osc.stop(t0 + n.t + n.d + 0.05);
+      });
+    });
+  }
+
+  /* ============ EXIBIÇÃO ============ */
+  function tipoLabel(c){
+    if(c.orderType === 'mesa')     return {txt:'🪑 LEVAR NA MESA ' + (c.table || ''), cls:'mesa'};
+    if(c.orderType === 'entrega')  return {txt:'🛵 SAIU PARA ENTREGA', cls:'entrega'};
+    return {txt:'🏠 RETIRAR NO BALCÃO', cls:''};
+  }
+
+  function mostrarProxima(){
+    if(exibindo || filaEspera.length === 0){
+      atualizarAvisoFila();
+      return;
+    }
+    exibindo = true;
+    const c = filaEspera.shift();
+    atualizarAvisoFila();
+
+    const tipo = tipoLabel(c);
+    document.getElementById('stageContent').innerHTML = `
+      <div class="call-card">
+        <div class="call-label">Pedido pronto</div>
+        <div class="call-number">${c.dailyNumber || '–'}</div>
+        <div class="call-name">${escapeHtml(c.customerName || '')}</div>
+        <div class="call-type ${tipo.cls}">${tipo.txt}</div>
+      </div>`;
+
+    // flash + som
+    const flash = document.getElementById('flash');
+    flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
+    tocarChamada();
+
+    // barra de tempo
+    const bar = document.getElementById('timerBar');
+    bar.classList.remove('run'); void bar.offsetWidth;
+    bar.style.animationDuration = (TEMPO_NA_TELA/1000) + 's';
+    bar.classList.add('run');
+
+    setTimeout(() => {
+      // guarda no histórico e libera pra próxima
+      historico.unshift(c);
+      if(historico.length > MAX_HISTORICO) historico.pop();
+      renderHistorico();
+      exibindo = false;
+      if(filaEspera.length > 0) mostrarProxima();
+      else mostrarOcioso();
+    }, TEMPO_NA_TELA);
+  }
+
+  function mostrarOcioso(){
+    document.getElementById('stageContent').innerHTML = `
+      <div class="idle">
+        <div class="idle-icon">🍢</div>
+        <h2>Aguardando pedidos...</h2>
+      </div>`;
+    document.getElementById('timerBar').classList.remove('run');
+  }
+
+  function atualizarAvisoFila(){
+    const el = document.getElementById('queueAlert');
+    if(filaEspera.length > 0){
+      el.textContent = `⏳ mais ${filaEspera.length} pedido${filaEspera.length>1?'s':''} na fila`;
+      el.style.display = 'block';
+    }else{
+      el.style.display = 'none';
+    }
+  }
+
+  function renderHistorico(){
+    const box = document.getElementById('history');
+    if(historico.length === 0){
+      box.innerHTML = '<div class="hist-empty">Nenhuma chamada ainda</div>';
+      return;
+    }
+    box.innerHTML = historico.map((c, i) => {
+      const tipo = tipoLabel(c);
+      const hora = c.calledAt ? new Date(c.calledAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '';
+      return `
+      <div class="hist-item ${i===0?'recent':''}">
+        <div class="hist-num">${c.dailyNumber || '–'}</div>
+        <div class="hist-info">
+          <strong>${escapeHtml(c.customerName || '')}</strong>
+          <span>${tipo.txt} · ${hora}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  /* ============ FIRESTORE ============ */
+  function ouvirChamadas(){
+    db.collection('calls')
+      .orderBy('calledAt','desc')
+      .limit(20)
+      .onSnapshot((snap) => {
+        setConn(true);
+        const docs = snap.docs.map(d => Object.assign({_id:d.id}, d.data()));
+
+        if(conhecidas === null){
+          // primeira carga: preenche o histórico sem tocar som
+          conhecidas = new Set(docs.map(d => d._id));
+          historico = docs.slice(0, MAX_HISTORICO);
+          renderHistorico();
+          return;
+        }
+
+        // pega só as chamadas novas, da mais antiga pra mais nova
+        const novas = docs.filter(d => !conhecidas.has(d._id)).reverse();
+        docs.forEach(d => conhecidas.add(d._id));
+
+        if(novas.length > 0){
+          // ENFILEIRA em vez de substituir — nenhuma chamada se perde
+          filaEspera.push(...novas);
+          atualizarAvisoFila();
+          if(!exibindo) mostrarProxima();
+        }
+      }, (err) => {
+        console.error("Erro nas chamadas:", err);
+        setConn(false);
+      });
+  }
+
+  function setConn(ok){
+    document.getElementById('conn').className = 'conn' + (ok ? '' : ' off');
+    document.getElementById('connTxt').textContent = ok ? 'Conectado' : 'Sem conexão';
+  }
+  window.addEventListener('online', () => setConn(true));
+  window.addEventListener('offline', () => setConn(false));
+
+  /* ============ UTIL ============ */
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function tickClock(){
+    document.getElementById('clock').textContent =
+      new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  }
+  setInterval(tickClock, 10000); tickClock();
+
+  /* ============ INICIAR ============ */
+  document.getElementById('startBtn').addEventListener('click', () => {
+    initAudio();
+    tocarChamada(); // confirma que o som está funcionando
+    document.getElementById('startScreen').style.display = 'none';
+    // mantém a tela acesa, se o navegador permitir
+    if('wakeLock' in navigator){
+      navigator.wakeLock.request('screen').catch(()=>{});
+      document.addEventListener('visibilitychange', () => {
+        if(document.visibilityState === 'visible') navigator.wakeLock.request('screen').catch(()=>{});
+      });
+    }
+    ouvirChamadas();
+  });
+})();
+</script>
+
+</body>
+</html>
