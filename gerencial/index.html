@@ -1087,6 +1087,7 @@
 </style>
 
 <style id="tema-cumads">
+@media(max-width:640px){ #whoAmI{display:none !important;} }
 /* =====================================================================
    TEMA CUMAD'S GRILL — creme, vermelho-brasa e dourado, casando com o
    cardápio impresso (faixas vermelhas pinceladas com estrela dourada).
@@ -2637,7 +2638,7 @@ nav ul.nav-aberto a{color:var(--ink);}
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js"
         onerror="document.getElementById('falhaConexao').style.display='flex'"></script>
-<script src="/supa-firebase.js?v=4"
+<script src="/supa-firebase.js?v=5"
         onerror="document.getElementById('falhaConexao').style.display='flex'"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -9296,7 +9297,8 @@ if('serviceWorker' in navigator){
         const newSW = reg.installing;
         newSW.addEventListener('statechange', () => {
           if(newSW.state === 'installed' && navigator.serviceWorker.controller){
-            // nova versão pronta — recarrega em 1s
+            // nova versão pronta — recarrega em 1s (menos no meio de uma troca de senha)
+            if(window.__cumadsRecuperando) return;
             setTimeout(() => window.location.reload(), 1000);
           }
         });
@@ -9304,6 +9306,7 @@ if('serviceWorker' in navigator){
     }).catch(()=>{});
     // se o SW assumiu o controle agora (primeira ativação), recarrega pra garantir
     navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if(window.__cumadsRecuperando) return;
       window.location.reload();
     });
   });

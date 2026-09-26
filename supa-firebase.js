@@ -598,7 +598,13 @@
       self.currentUser = u;
       self._pronto = true;
       var uid = u ? u.uid : null;
-      if (evento === 'PASSWORD_RECOVERY') setTimeout(function () { self._recuperarSenha(); }, 300);
+      if (evento === 'PASSWORD_RECOVERY') {
+        marcarRecuperacao(true);
+        setTimeout(function () { self._recuperarSenha(); }, 600);
+      } else if (evento === 'INITIAL_SESSION' && sessao && emRecuperacao()) {
+        // a página recarregou no meio da recuperação: pergunta de novo
+        setTimeout(function () { self._recuperarSenha(); }, 600);
+      }
       // o supabase-js não deixa chamar o banco dentro deste callback —
       // por isso os avisos saem num setTimeout
       if (uid !== self._ultimoUid) {
@@ -610,12 +616,62 @@
       }
     });
   };
+  // ---- Recuperação de senha pelo link do e-mail ----
+  // O link abre o site já com a sessão de recuperação. A página pode se
+  // recarregar sozinha nessa hora (atualização do app), então marcamos a
+  // recuperação no sessionStorage: se recarregar, a pergunta volta.
+  var FLAG_REC = 'cumads_trocar_senha';
+  function marcarRecuperacao(on) {
+    window.__cumadsRecuperando = !!on;
+    try { if (on) sessionStorage.setItem(FLAG_REC, '1'); else sessionStorage.removeItem(FLAG_REC); } catch (e) {}
+  }
+  function emRecuperacao() {
+    try { if (sessionStorage.getItem(FLAG_REC) === '1') return true; } catch (e) {}
+    return !!window.__cumadsRecuperando;
+  }
+  if (/type=recovery/.test(location.hash || '') || emRecuperacao()) marcarRecuperacao(true);
+
+  function traduzErroSenha(e) {
+    var m = String((e && e.message) || e || '');
+    if (/different from the old/i.test(m)) return 'A nova senha precisa ser diferente da atual.';
+    if (/at least|characters|weak/i.test(m)) return 'Senha muito curta (mínimo 6 caracteres).';
+    if (/fetch|load failed|network/i.test(m)) return 'Sem conexão com o servidor. Verifique a internet e tente de novo.';
+    if (/session|expired|jwt/i.test(m)) return 'O link expirou. Peça um novo em "Esqueci minha senha".';
+    return m || 'Erro desconhecido.';
+  }
+
   Auth.prototype._recuperarSenha = function () {
+    var self = this;
+    if (self._perguntandoSenha) return;
+    self._perguntandoSenha = true;
     var nova = window.prompt('Digite a sua NOVA senha (mínimo 6 caracteres):');
-    if (!nova) return;
-    client.auth.updateUser({ password: nova }).then(function (r) {
-      alert(r.error ? 'Não foi possível trocar a senha: ' + r.error.message : '✅ Senha alterada! Você já está conectado.');
+    if (nova === null) { self._perguntandoSenha = false; marcarRecuperacao(false); return; }
+    if (nova.length < 6) {
+      alert('A senha precisa ter pelo menos 6 caracteres.');
+      self._perguntandoSenha = false;
+      setTimeout(function () { self._recuperarSenha(); }, 100);
+      return;
+    }
+    function tentar(n) {
+      return client.auth.updateUser({ password: nova }).then(function (r) {
+        if (r.error) throw r.error;
+      }).catch(function (e) {
+        var rede = /fetch|load failed|network/i.test(String((e && e.message) || e));
+        if (rede && n < 3) return sleep(1500).then(function () { return tentar(n + 1); });
+        if (rede) return firebase.definirSenha('', nova); // último recurso: pela edge function
+        throw e;
+      });
+    }
+    tentar(1).then(function () {
+      marcarRecuperacao(false);
+      self._perguntandoSenha = false;
       try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+      alert('✅ Senha alterada! Você já está conectado.');
+    }, function (e) {
+      self._perguntandoSenha = false;
+      alert('Não foi possível trocar a senha: ' + traduzErroSenha(e));
+      if (!/different from the old|at least|characters|weak/i.test(String((e && e.message) || e))) return;
+      setTimeout(function () { self._recuperarSenha(); }, 100);
     });
   };
   Auth.prototype.onAuthStateChanged = function (next) {
