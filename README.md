@@ -42,11 +42,15 @@ As telas usam uma API de documentos (coleção → documento → JSON). O arquiv
 - **Contas:** Supabase Auth. A edge function `criar-conta` cria contas já confirmadas
   (cliente com conta de fidelidade e funcionário cadastrado pelo gerente). O acesso ao
   painel vem do documento `users/{uid}`, que só o gerente grava.
+- **Troca de senha sem e-mail:** a edge function `alterar-senha` deixa cada pessoa trocar a
+  própria senha (botão 🔑 no topo do painel) e o gerente definir a senha de alguém da equipe
+  (Ajustes → Equipe → 🔑).
 
 ### Recriar do zero
 
 1. Rode `supabase/migrations/0001_fs_docs.sql` e `0002_fs_helpers_private.sql` no SQL Editor.
-2. Publique `supabase/functions/criar-conta` (sem verificação de JWT — a função valida os dados).
+2. Publique `supabase/functions/criar-conta` e `supabase/functions/alterar-senha`
+   (sem verificação de JWT — as funções validam os dados e a sessão sozinhas).
 3. Crie a conta do gerente (Authentication → Add user, com "auto confirm") e rode
    `supabase/seed.sql` trocando o e-mail no final.
 4. Troque `supabaseUrl`/`supabaseKey` nos três `index.html` (procure `firebaseConfig`).

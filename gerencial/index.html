@@ -1380,6 +1380,7 @@ nav ul.nav-aberto a{color:var(--ink);}
         <span id="whoAmI" style="font-size:12px; color:rgba(57,27,20,0.55); display:none;"></span>
         <a href="../chamada/" target="_blank" class="tv-link" id="tvLink" style="display:none;" title="Abrir painel de chamada na TV">📺 <span class="tv-lbl">TV</span></a>
         <button class="btn-ghost" id="soundToggleBtn" style="display:none; padding:8px 14px; font-size:14px;" title="Ligar/desligar som de pedido novo">🔔</button>
+        <button class="btn-ghost" id="minhaSenhaBtn" style="display:none; padding:8px 12px; font-size:12px;" title="Trocar minha senha">🔑</button>
         <button class="btn-ghost" id="logoutBtn" style="display:none; padding:8px 16px; font-size:12px;">Sair</button>
         <button class="close-btn" data-close="adminOverlay">✕</button>
       </div>
@@ -2636,7 +2637,7 @@ nav ul.nav-aberto a{color:var(--ink);}
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js"
         onerror="document.getElementById('falhaConexao').style.display='flex'"></script>
-<script src="/supa-firebase.js?v=3"
+<script src="/supa-firebase.js?v=4"
         onerror="document.getElementById('falhaConexao').style.display='flex'"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -8893,7 +8894,7 @@ nav ul.nav-aberto a{color:var(--ink);}
         <div class="row-actions">
           <button class="icon-btn" data-editperm="${e.id}" title="Alterar permissões">🔧</button>
           <button class="icon-btn" data-toggleemp="${e.id}" title="${e.active===false?'Reativar acesso':'Bloquear acesso'}">${e.active===false?'▶️':'⏸️'}</button>
-          <button class="icon-btn" data-resetemp="${e.id}" title="Enviar redefinição de senha">🔑</button>
+          <button class="icon-btn" data-resetemp="${e.id}" title="Definir nova senha">🔑</button>
         </div>
       </div>
     `).join('');
@@ -8909,11 +8910,15 @@ nav ul.nav-aberto a{color:var(--ink);}
     box.querySelectorAll('[data-editperm]').forEach(btn => btn.addEventListener('click', () => openPermEditor(btn.dataset.editperm)));
     box.querySelectorAll('[data-resetemp]').forEach(btn => btn.addEventListener('click', async () => {
       const emp = employees.find(x => x.id === btn.dataset.resetemp); if(!emp || !emp.email) return;
-      if(!confirm("Enviar link de redefinição de senha para " + emp.email + "?")) return;
+      const nova = prompt("Nova senha para " + (emp.name || emp.email) + " (mínimo 6 caracteres):");
+      if(nova === null) return;
+      if(nova.length < 6){ alert("A senha precisa ter pelo menos 6 caracteres."); return; }
       try{
-        await auth.sendPasswordResetEmail(emp.email);
-        showToast("Link enviado para " + emp.email);
-      }catch(e){ alert("Não foi possível enviar o e-mail."); }
+        await firebase.definirSenha(emp.id, nova);
+        alert("✅ Senha de " + (emp.name || emp.email) + " alterada.\n\nPasse a nova senha para a pessoa.");
+      }catch(e){
+        alert(e.code === 'auth/weak-password' ? "Senha muito fraca (mínimo 6 caracteres)." : "Não foi possível alterar a senha. Verifique se você é gerente.");
+      }
     }));
   }
 
@@ -9056,6 +9061,7 @@ nav ul.nav-aberto a{color:var(--ink);}
     who.textContent = (icons[currentRole] || '🧑‍🍳') + " " + (currentEmployee ? currentEmployee.name : "") + " · " + roleLabel(currentRole);
     who.style.display = 'inline';
     logoutBtn.style.display = 'inline-block';
+    document.getElementById('minhaSenhaBtn').style.display = 'inline-block';
     document.getElementById('soundToggleBtn').style.display = 'inline-block';
     const tvL = document.getElementById('tvLink');
     if(tvL) tvL.style.display = (areaAtiva('tv') && myPerms.includes('tv')) ? 'inline-flex' : 'none';
@@ -9133,6 +9139,7 @@ nav ul.nav-aberto a{color:var(--ink);}
       if(fixedCostsUnsub){ if(typeof fixedCostsUnsub === 'function') fixedCostsUnsub(); fixedCostsUnsub = null; fixedCosts = []; }
       document.getElementById('whoAmI').style.display = 'none';
       document.getElementById('logoutBtn').style.display = 'none';
+      document.getElementById('minhaSenhaBtn').style.display = 'none';
       document.getElementById('soundToggleBtn').style.display = 'none';
       document.getElementById('authPass').value = "";
       showView('login');
@@ -9183,6 +9190,20 @@ nav ul.nav-aberto a{color:var(--ink);}
       await auth.signOut();
       document.getElementById('loginError').textContent = "Erro ao verificar seu acesso. Tente de novo.";
     }
+  });
+
+  // Trocar a própria senha, sem precisar de e-mail
+  document.getElementById('minhaSenhaBtn').addEventListener('click', async () => {
+    const nova = prompt("Digite a sua NOVA senha (mínimo 6 caracteres):");
+    if(nova === null) return;
+    if(nova.length < 6){ alert("A senha precisa ter pelo menos 6 caracteres."); return; }
+    const conf = prompt("Repita a nova senha:");
+    if(conf === null) return;
+    if(conf !== nova){ alert("As senhas não conferem. Nada foi alterado."); return; }
+    try{
+      await firebase.definirSenha('', nova);
+      alert("✅ Senha alterada! Use a nova senha no próximo acesso.");
+    }catch(e){ alert("Não foi possível alterar a senha. Tente de novo."); }
   });
 
   document.getElementById('logoutBtn').addEventListener('click', async () => {

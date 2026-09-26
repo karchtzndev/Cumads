@@ -694,6 +694,22 @@
   firebase.firestore.FieldValue = FieldValue;
   firebase.firestore.Timestamp = Timestamp;
   firebase.auth = function () { return firebase.app().auth(); };
+  // Troca de senha sem e-mail (edge function alterar-senha):
+  // a própria pessoa, ou o gerente para alguém da equipe.
+  firebase.definirSenha = function (uid, senha) {
+    return client.functions.invoke('alterar-senha', { body: { uid: uid || '', password: senha } }).then(function (r) {
+      if (r.error) {
+        var ctx = r.error.context;
+        if (ctx && typeof ctx.json === 'function') {
+          return ctx.json().then(function (b) { throw erroAuth({ message: (b && b.error) || r.error.message }); },
+                                 function () { throw erroAuth(r.error); });
+        }
+        throw erroAuth(r.error);
+      }
+      if (r.data && r.data.error) throw erroAuth({ message: r.data.error });
+      return true;
+    });
+  };
   firebase.auth.EmailAuthProvider = {
     credential: function (email, password) { return { email: email, password: password }; }
   };
