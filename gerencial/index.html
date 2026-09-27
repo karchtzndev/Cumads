@@ -2282,6 +2282,7 @@ nav ul.nav-aberto a{color:var(--ink);}
           <div class="admin-list">
             <h3>📍 Contato & Endereço</h3>
             <div class="field"><label>Endereço completo</label><textarea id="lojaAddress" placeholder="Rua, número, bairro, cidade"></textarea></div>
+            <div class="field"><label>Link do Google Maps (botão "Como chegar")</label><input type="url" id="lojaMaps" placeholder="Cole aqui o link da loja no Google Maps"></div>
             <div class="field"><label>WhatsApp (com DDD, só números)</label><input type="text" id="lojaWhatsapp" placeholder="Ex: 11999999999"></div>
             <div class="field"><label>Instagram (com @)</label><input type="text" id="lojaInstagram" placeholder="Ex: @cumads.grill"></div>
           </div>
@@ -3973,6 +3974,7 @@ nav ul.nav-aberto a{color:var(--ink);}
       renderHorarios(info.horarios);
       atualizarInfoImpressao();
       document.getElementById('lojaAddress').value = info.address || "";
+      document.getElementById('lojaMaps').value = info.mapsUrl || "";
       document.getElementById('lojaWhatsapp').value = info.whatsapp || "";
       document.getElementById('lojaInstagram').value = info.instagram || "";
       document.getElementById('lojaClosedMsg').value = info.closedMsg || "";
@@ -4013,6 +4015,10 @@ nav ul.nav-aberto a{color:var(--ink);}
       freeFrom: parseFloat(document.getElementById('lojaFreeFrom').value) || 0,
       horarios: lerHorarios(),
       address: document.getElementById('lojaAddress').value.trim(),
+      mapsUrl: document.getElementById('lojaMaps').value.trim(),
+      // coordenadas do mapa: mantém as que já estavam gravadas
+      lat: storeInfo.lat || null,
+      lng: storeInfo.lng || null,
       whatsapp: document.getElementById('lojaWhatsapp').value.trim(),
       instagram: document.getElementById('lojaInstagram').value.trim()
     };

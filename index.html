@@ -1050,6 +1050,11 @@ h1.hero-title .ht-grill{display:inline-block; margin-top:10px; font-family:'Alfa
 .loc-card h3{color:var(--red);}
 .contact-icon{background:rgba(168,52,31,0.1) !important;}
 
+
+/* ---------- mapa ---------- */
+.loc-mapa{margin-top:26px; display:flex; flex-direction:column; align-items:center; gap:16px;}
+.loc-mapa iframe{width:100%; height:320px; border:3px solid var(--gold); border-radius:18px; background:#f7e7c4;}
+@media(max-width:560px){ .loc-mapa iframe{height:260px;} }
 /* ---------- faixa de chamada ---------- */
 .band{background:var(--red); border-top:3px solid var(--gold); border-bottom:3px solid var(--gold);}
 .band::before, .band::after{color:rgba(242,201,76,0.18);}
@@ -1219,15 +1224,21 @@ footer .brand-text .l1{color:#fff6e6;}
       <div class="loc-card">
         <h3>Funcionamento</h3>
         <div id="infoHorarios">
-          <div class="hours-row"><span>Quarta a Domingo</span><span>19h – 23h</span></div>
+          <div class="hours-row"><span>Horário</span><span>Consulte pelo WhatsApp</span></div>
         </div>
       </div>
       <div class="loc-card">
         <h3>Contato & Endereço</h3>
-        <div class="contact-row"><div class="contact-icon">📍</div><div><div class="lbl">Endereço</div><div class="val" id="infoAddress">Preencha seu endereço aqui</div></div></div>
+        <div class="contact-row"><div class="contact-icon">📍</div><div><div class="lbl">Endereço</div><div class="val" id="infoAddress">Av. Marechal Gouveia — Vila Jaiara, Setor Norte, Anápolis - GO</div></div></div>
         <div class="contact-row"><div class="contact-icon">📱</div><div><div class="lbl">WhatsApp</div><div class="val" id="infoWhatsapp">(62) 99135-6366</div></div></div>
         <div class="contact-row"><div class="contact-icon">📷</div><div><div class="lbl">Instagram</div><div class="val" id="infoInstagram">@cumads.grill</div></div></div>
       </div>
+    </div>
+    <div class="loc-mapa" id="locMapa">
+      <iframe id="locMapaFrame" title="Mapa do Cumad's Grill" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+        src="https://maps.google.com/maps?q=-16.2848522,-48.967655&z=16&output=embed"></iframe>
+      <a class="cta-btn" id="btnComoChegar" target="_blank" rel="noopener"
+         href="https://www.google.com/maps/dir/?api=1&destination=-16.2848522,-48.967655">📍 Como chegar</a>
     </div>
   </div>
 </section>
@@ -2690,10 +2701,11 @@ footer .brand-text .l1{color:#fff6e6;}
     const box = document.getElementById('infoHorarios');
     if(!box) return;
     const nomes = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
-    const padrao = {0:{aberto:true,abre:'19:00',fecha:'23:00'},1:{aberto:false},2:{aberto:false},
-                    3:{aberto:true,abre:'19:00',fecha:'23:00'},4:{aberto:true,abre:'19:00',fecha:'23:00'},
-                    5:{aberto:true,abre:'19:00',fecha:'23:00'},6:{aberto:true,abre:'19:00',fecha:'23:00'}};
-    const h = horarios || padrao;
+    if(!horarios){
+      box.innerHTML = '<div class="hours-row"><span>Horário</span><span>Consulte pelo WhatsApp</span></div>';
+      return;
+    }
+    const h = horarios;
     const fmt = t => String(t||'').replace(':00','h').replace(':','h');
 
     // sequências de dias consecutivos com o mesmo horário
@@ -2757,6 +2769,15 @@ footer .brand-text .l1{color:#fff6e6;}
       const info = doc.exists ? doc.data() : {};
       renderHorariosCliente(info.horarios);
       if(info.address) document.getElementById('infoAddress').textContent = info.address;
+      if(info.mapsUrl){
+        const bc = document.getElementById('btnComoChegar');
+        if(bc) bc.href = info.mapsUrl;
+      }
+      if(info.lat && info.lng){
+        const fr = document.getElementById('locMapaFrame');
+        const src = 'https://maps.google.com/maps?q=' + Number(info.lat) + ',' + Number(info.lng) + '&z=16&output=embed';
+        if(fr && fr.getAttribute('src') !== src) fr.setAttribute('src', src);
+      }
       if(info.instagram) document.getElementById('infoInstagram').textContent = info.instagram;
 
       storeWhatsappNumber = info.whatsapp || "";
