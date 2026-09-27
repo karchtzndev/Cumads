@@ -2638,7 +2638,7 @@ nav ul.nav-aberto a{color:var(--ink);}
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js"
         onerror="document.getElementById('falhaConexao').style.display='flex'"></script>
-<script src="/supa-firebase.js?v=5"
+<script src="/supa-firebase.js?v=7"
         onerror="document.getElementById('falhaConexao').style.display='flex'"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -8911,15 +8911,9 @@ nav ul.nav-aberto a{color:var(--ink);}
     box.querySelectorAll('[data-editperm]').forEach(btn => btn.addEventListener('click', () => openPermEditor(btn.dataset.editperm)));
     box.querySelectorAll('[data-resetemp]').forEach(btn => btn.addEventListener('click', async () => {
       const emp = employees.find(x => x.id === btn.dataset.resetemp); if(!emp || !emp.email) return;
-      const nova = prompt("Nova senha para " + (emp.name || emp.email) + " (mínimo 6 caracteres):");
-      if(nova === null) return;
-      if(nova.length < 6){ alert("A senha precisa ter pelo menos 6 caracteres."); return; }
-      try{
-        await firebase.definirSenha(emp.id, nova);
-        alert("✅ Senha de " + (emp.name || emp.email) + " alterada.\n\nPasse a nova senha para a pessoa.");
-      }catch(e){
-        alert(e.code === 'auth/weak-password' ? "Senha muito fraca (mínimo 6 caracteres)." : "Não foi possível alterar a senha. Verifique se você é gerente.");
-      }
+      const quem = emp.name || emp.email;
+      firebase.janelaNovaSenha(emp.id, 'Nova senha para ' + escapeHtml(quem),
+        '✅ Senha de ' + escapeHtml(quem) + ' alterada. Passe a nova senha para a pessoa.');
     }));
   }
 
@@ -9121,12 +9115,29 @@ nav ul.nav-aberto a{color:var(--ink);}
     const email = document.getElementById('authEmail').value.trim();
     const errEl = document.getElementById('loginError');
     if(!email){ errEl.textContent = "Digite seu e-mail acima primeiro."; return; }
+    // Um e-mail novo invalida o link do anterior — então nada de envio duplo
+    const btn = document.getElementById('forgotPassBtn');
+    if(btn.disabled) return;
+    btn.disabled = true;
+    const textoOriginal = btn.textContent;
+    btn.textContent = "Enviando...";
     try{
       await auth.sendPasswordResetEmail(email);
       errEl.style.color = "var(--green)";
-      errEl.textContent = "Enviamos um link de redefinição pro seu e-mail.";
-      setTimeout(() => { errEl.style.color = ""; errEl.textContent = ""; }, 6000);
-    }catch(e){ errEl.textContent = "Não foi possível enviar. Confira o e-mail."; }
+      errEl.textContent = "Enviamos o link pro seu e-mail. Use só o e-mail MAIS RECENTE — cada novo pedido cancela o link anterior.";
+      setTimeout(() => { errEl.style.color = ""; errEl.textContent = ""; }, 12000);
+    }catch(e){
+      errEl.textContent = e.code === 'auth/too-many-requests'
+        ? "Muitos pedidos seguidos. Aguarde 1 minuto e use o último e-mail que chegou."
+        : "Não foi possível enviar. Confira o e-mail.";
+    }
+    // espera 60s antes de permitir outro envio
+    let restante = 60;
+    const t = setInterval(() => {
+      restante--;
+      btn.textContent = "Reenviar em " + restante + "s";
+      if(restante <= 0){ clearInterval(t); btn.disabled = false; btn.textContent = textoOriginal; }
+    }, 1000);
   });
 
   // Estado de autenticação: única porta de entrada do painel
@@ -9194,17 +9205,8 @@ nav ul.nav-aberto a{color:var(--ink);}
   });
 
   // Trocar a própria senha, sem precisar de e-mail
-  document.getElementById('minhaSenhaBtn').addEventListener('click', async () => {
-    const nova = prompt("Digite a sua NOVA senha (mínimo 6 caracteres):");
-    if(nova === null) return;
-    if(nova.length < 6){ alert("A senha precisa ter pelo menos 6 caracteres."); return; }
-    const conf = prompt("Repita a nova senha:");
-    if(conf === null) return;
-    if(conf !== nova){ alert("As senhas não conferem. Nada foi alterado."); return; }
-    try{
-      await firebase.definirSenha('', nova);
-      alert("✅ Senha alterada! Use a nova senha no próximo acesso.");
-    }catch(e){ alert("Não foi possível alterar a senha. Tente de novo."); }
+  document.getElementById('minhaSenhaBtn').addEventListener('click', () => {
+    firebase.janelaNovaSenha('', 'Trocar a minha senha');
   });
 
   document.getElementById('logoutBtn').addEventListener('click', async () => {
@@ -9298,7 +9300,7 @@ if('serviceWorker' in navigator){
         newSW.addEventListener('statechange', () => {
           if(newSW.state === 'installed' && navigator.serviceWorker.controller){
             // nova versão pronta — recarrega em 1s (menos no meio de uma troca de senha)
-            if(window.__cumadsRecuperando) return;
+            if(window.__cumadsRecuperando || window.__cumadsJanelaAberta) return;
             setTimeout(() => window.location.reload(), 1000);
           }
         });
@@ -9306,7 +9308,7 @@ if('serviceWorker' in navigator){
     }).catch(()=>{});
     // se o SW assumiu o controle agora (primeira ativação), recarrega pra garantir
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if(window.__cumadsRecuperando) return;
+      if(window.__cumadsRecuperando || window.__cumadsJanelaAberta) return;
       window.location.reload();
     });
   });

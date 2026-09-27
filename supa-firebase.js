@@ -616,6 +616,51 @@
       }
     });
   };
+  // ---- Janelas do próprio site (o iPhone pode bloquear prompt/alert) ----
+  function janela(html) {
+    var fundo = document.createElement('div');
+    fundo.setAttribute('style', 'position:fixed;inset:0;z-index:99999;background:rgba(57,27,20,.6);display:flex;align-items:center;justify-content:center;padding:18px;font-family:Montserrat,system-ui,sans-serif;');
+    fundo.innerHTML = '<div style="background:#fffaf0;color:#391b14;border:3px solid #f2c94c;border-radius:18px;max-width:380px;width:100%;box-shadow:0 18px 50px rgba(0,0,0,.35);overflow:hidden;">' +
+      '<div style="background:#a8341f;color:#fff6e6;padding:14px 18px;font-weight:800;font-size:16px;">🔑 Cumad\u2019s Grill</div>' +
+      '<div style="padding:18px;">' + html + '</div></div>';
+    (document.body || document.documentElement).appendChild(fundo);
+    // enquanto a janela estiver aberta, o app não se recarrega para atualizar
+    window.__cumadsJanelaAberta = (window.__cumadsJanelaAberta || 0) + 1;
+    var remover = fundo.remove.bind(fundo);
+    fundo.remove = function () { window.__cumadsJanelaAberta = Math.max(0, (window.__cumadsJanelaAberta || 1) - 1); remover(); };
+    return fundo;
+  }
+  var ESTILO_CAMPO = 'width:100%;box-sizing:border-box;padding:12px 14px;margin:6px 0 10px;border:2px solid rgba(168,52,31,.3);border-radius:10px;font-size:16px;background:#fff;color:#391b14;';
+  var ESTILO_BOTAO = 'width:100%;padding:13px;border:none;border-radius:999px;background:#a8341f;color:#fff6e6;font-weight:800;font-size:15px;cursor:pointer;margin-top:6px;';
+  function aviso(texto, depois) {
+    var j = janela('<p style="margin:0 0 14px;line-height:1.5;font-size:15px;">' + texto + '</p><button style="' + ESTILO_BOTAO + '">OK</button>');
+    j.querySelector('button').onclick = function () { j.remove(); if (depois) depois(); };
+  }
+  function pedirNovaSenha(aoConfirmar, aoCancelar, titulo) {
+    var j = janela(
+      '<p style="margin:0 0 8px;font-weight:700;">' + (titulo || 'Crie a sua nova senha') + '</p>' +
+      '<input type="password" autocomplete="new-password" placeholder="Nova senha (mínimo 6)" style="' + ESTILO_CAMPO + '">' +
+      '<input type="password" autocomplete="new-password" placeholder="Repita a nova senha" style="' + ESTILO_CAMPO + '">' +
+      '<div class="cg-erro" style="color:#c0392b;font-size:13px;min-height:18px;"></div>' +
+      '<button class="cg-ok" style="' + ESTILO_BOTAO + '">Salvar nova senha</button>' +
+      '<button class="cg-cancel" style="' + ESTILO_BOTAO + 'background:transparent;color:#a8341f;">Cancelar</button>');
+    var campos = j.querySelectorAll('input'), erro = j.querySelector('.cg-erro'), ok = j.querySelector('.cg-ok');
+    setTimeout(function () { try { campos[0].focus(); } catch (e) {} }, 50);
+    j.querySelector('.cg-cancel').onclick = function () { j.remove(); if (aoCancelar) aoCancelar(); };
+    ok.onclick = function () {
+      var a = campos[0].value, b = campos[1].value;
+      if (a.length < 6) { erro.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+      if (a !== b) { erro.textContent = 'As duas senhas não são iguais.'; return; }
+      erro.textContent = '';
+      ok.disabled = true; ok.textContent = 'Salvando...';
+      aoConfirmar(a, function (msgErro) {           // callback de resultado
+        if (msgErro) { ok.disabled = false; ok.textContent = 'Salvar nova senha'; erro.textContent = msgErro; }
+        else j.remove();
+      });
+    };
+    campos[1].onkeydown = function (e) { if (e.key === 'Enter') ok.onclick(); };
+  }
+
   // ---- Recuperação de senha pelo link do e-mail ----
   // O link abre o site já com a sessão de recuperação. A página pode se
   // recarregar sozinha nessa hora (atualização do app), então marcamos a
@@ -640,40 +685,60 @@
     return m || 'Erro desconhecido.';
   }
 
-  Auth.prototype._recuperarSenha = function () {
-    var self = this;
-    if (self._perguntandoSenha) return;
-    self._perguntandoSenha = true;
-    var nova = window.prompt('Digite a sua NOVA senha (mínimo 6 caracteres):');
-    if (nova === null) { self._perguntandoSenha = false; marcarRecuperacao(false); return; }
-    if (nova.length < 6) {
-      alert('A senha precisa ter pelo menos 6 caracteres.');
-      self._perguntandoSenha = false;
-      setTimeout(function () { self._recuperarSenha(); }, 100);
-      return;
-    }
+  // Troca a senha de quem está logado mantendo a sessão aberta.
+  // (A edge function troca pelo lado do servidor, e isso encerra as sessões
+  //  da conta — por isso ela fica só como último recurso ou para o gerente.)
+  function trocarPropriaSenha(nova) {
     function tentar(n) {
       return client.auth.updateUser({ password: nova }).then(function (r) {
         if (r.error) throw r.error;
       }).catch(function (e) {
         var rede = /fetch|load failed|network/i.test(String((e && e.message) || e));
         if (rede && n < 3) return sleep(1500).then(function () { return tentar(n + 1); });
-        if (rede) return firebase.definirSenha('', nova); // último recurso: pela edge function
+        if (rede) return firebase.definirSenha('', nova);
         throw e;
       });
     }
-    tentar(1).then(function () {
+    return tentar(1);
+  }
+
+  Auth.prototype._recuperarSenha = function () {
+    var self = this;
+    if (self._perguntandoSenha) return;
+    self._perguntandoSenha = true;
+    function limparUrl() { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
+    pedirNovaSenha(function (nova, resultado) {
+      trocarPropriaSenha(nova).then(function () {
+        marcarRecuperacao(false);
+        self._perguntandoSenha = false;
+        limparUrl();
+        resultado(null);
+        aviso('✅ Senha alterada! Você já está conectado.');
+      }, function (e) {
+        resultado(traduzErroSenha(e));
+      });
+    }, function () {
+      self._perguntandoSenha = false;
       marcarRecuperacao(false);
-      self._perguntandoSenha = false;
-      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
-      alert('✅ Senha alterada! Você já está conectado.');
-    }, function (e) {
-      self._perguntandoSenha = false;
-      alert('Não foi possível trocar a senha: ' + traduzErroSenha(e));
-      if (!/different from the old|at least|characters|weak/i.test(String((e && e.message) || e))) return;
-      setTimeout(function () { self._recuperarSenha(); }, 100);
+      limparUrl();
     });
   };
+
+  // Link do e-mail vencido ou já usado: o Supabase volta com #error=...
+  (function () {
+    var h = location.hash || '';
+    if (!/error=|error_code=/.test(h)) return;
+    var p = {};
+    h.replace(/^#/, '').split('&').forEach(function (kv) { var i = kv.indexOf('='); if (i > 0) p[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1).replace(/\+/g, ' ')); });
+    var msg = (p.error_code === 'otp_expired' || /expired|invalid/i.test(p.error_description || ''))
+      ? 'Esse link de recuperação expirou ou já foi usado.<br><br>Toque em <b>"Esqueci minha senha"</b> de novo e abra <b>só o e-mail mais recente</b> (cada pedido novo cancela o link anterior).'
+      : 'Não foi possível abrir o link: ' + (p.error_description || p.error || 'erro desconhecido');
+    marcarRecuperacao(false);
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    var mostrar = function () { aviso(msg); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mostrar); else setTimeout(mostrar, 0);
+  })();
+
   Auth.prototype.onAuthStateChanged = function (next) {
     var self = this;
     var cb = typeof next === 'function' ? next : (next && next.next ? next.next.bind(next) : function () {});
@@ -733,7 +798,7 @@
       if (!client) {
         if (!window.supabase || !window.supabase.createClient) throw new Error('supabase-js não carregou');
         client = window.supabase.createClient(config.supabaseUrl, config.supabaseKey, {
-          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit' },
           realtime: { params: { eventsPerSecond: 20 } }
         });
         firebase._client = client;
@@ -765,6 +830,21 @@
       if (r.data && r.data.error) throw erroAuth({ message: r.data.error });
       return true;
     });
+  };
+  // Janela de nova senha para o painel (própria pessoa: uid vazio; gerente: uid da equipe)
+  firebase.janelaNovaSenha = function (uid, titulo, msgOk) {
+    pedirNovaSenha(function (nova, resultado) {
+      var eu = firebase.app() && firebase.app().auth().currentUser;
+      var propria = !uid || (eu && eu.uid === uid);
+      (propria ? trocarPropriaSenha(nova) : firebase.definirSenha(uid, nova)).then(function () {
+        resultado(null);
+        aviso(msgOk || '✅ Senha alterada! Use a nova senha no próximo acesso.');
+      }, function (e) {
+        resultado(/weak/.test(e.code || '') ? 'Senha muito curta (mínimo 6 caracteres).'
+          : /manager|not part/i.test(e.message || '') ? 'Só a gerente pode trocar a senha de outra pessoa.'
+          : traduzErroSenha(e));
+      });
+    }, null, titulo);
   };
   firebase.auth.EmailAuthProvider = {
     credential: function (email, password) { return { email: email, password: password }; }

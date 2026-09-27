@@ -1680,7 +1680,7 @@ footer .brand-text .l1{color:#fff6e6;}
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js"
         onerror="document.getElementById('falhaConexao').style.display='flex'"></script>
-<script src="/supa-firebase.js?v=5"
+<script src="/supa-firebase.js?v=7"
         onerror="document.getElementById('falhaConexao').style.display='flex'"></script>
 <script>
   // Banco de dados: Supabase (projeto cumads-grill). A chave "publishable"
@@ -4327,7 +4327,7 @@ if('serviceWorker' in navigator){
               // window.__itensNoCarrinho é publicado pelo app; se por algum
               // motivo não existir, tratamos como carrinho vazio.
               const noCarrinho = Number(window.__itensNoCarrinho) || 0;
-              const ocupado = noCarrinho > 0 || document.querySelector('.overlay.open') || window.__cumadsRecuperando;
+              const ocupado = noCarrinho > 0 || document.querySelector('.overlay.open') || window.__cumadsRecuperando || window.__cumadsJanelaAberta;
               if(ocupado){ setTimeout(tentarRecarregar, 5000); return; }
               window.location.reload();
             };
