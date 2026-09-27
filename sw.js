@@ -1,4 +1,4 @@
-const CACHE = "cumads-cliente-v6";
+const CACHE = "cumads-cliente-v7";
 const ASSETS = ["/", "/index.html", "/manifest.json", "/icon-192.png", "/icon-512.png", "/mascot.jpg", "/mascot.webp"];
 
 self.addEventListener('install', (e) => {

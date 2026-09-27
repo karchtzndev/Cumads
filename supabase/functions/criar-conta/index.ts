@@ -51,6 +51,12 @@ Deno.serve(async (req) => {
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
 
+  // Proteção contra robôs: no máximo 15 contas novas a cada 10 minutos (somando todos)
+  const { data: recentes } = await admin.rpc("fs_contas_recentes");
+  if (typeof recentes === "number" && recentes >= 15) {
+    return json({ error: "too many requests, try again later" }, 429);
+  }
+
   const { data, error } = await admin.auth.admin.createUser({
     email,
     password,

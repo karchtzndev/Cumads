@@ -61,6 +61,7 @@
     if (/aborted/i.test(msg)) return FirebaseError('aborted', 'Transaction aborted.');
     if (/not-found/i.test(msg)) return FirebaseError('not-found', 'No document to update.');
     if (/invalid-argument/i.test(msg)) return FirebaseError('invalid-argument', 'Invalid argument.');
+    if (/resource-exhausted/i.test(msg)) return FirebaseError('resource-exhausted', 'Muitos envios seguidos. Aguarde um minuto e tente de novo.');
     if (/fetch|network|Load failed|NetworkError|timeout/i.test(msg))
       return FirebaseError('unavailable', 'Sem conexão com o servidor.');
     return FirebaseError('internal', msg || 'Erro interno.');
