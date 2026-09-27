@@ -1,0 +1,24 @@
+<!--
+  Modelo do e-mail "Reset Password" do Supabase, em português.
+  Onde colar: Supabase → Authentication → Emails → Reset Password
+  Assunto (Subject):  Cumad's Grill — redefina sua senha
+  Corpo (Message body): todo o HTML abaixo.
+  {{ .ConfirmationURL }} é trocado pelo Supabase pelo link de verdade — não altere.
+-->
+<div style="background:#fbf3df;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:480px;margin:0 auto;background:#fffaf0;border:3px solid #f2c94c;border-radius:16px;overflow:hidden;">
+    <div style="background:#a8341f;color:#fff6e6;padding:18px 22px;font-size:22px;font-weight:bold;">
+      Cumad's Grill
+      <div style="color:#f2c94c;font-size:12px;letter-spacing:3px;margin-top:2px;">★ GRILL ★</div>
+    </div>
+    <div style="padding:22px;color:#391b14;font-size:15px;line-height:1.55;">
+      <p style="margin:0 0 14px;"><strong>Redefinição de senha</strong></p>
+      <p style="margin:0 0 18px;">Recebemos um pedido para trocar a senha da sua conta. Toque no botão abaixo para criar uma nova senha:</p>
+      <p style="text-align:center;margin:0 0 20px;">
+        <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#a8341f;color:#fff6e6;text-decoration:none;font-weight:bold;padding:14px 28px;border-radius:999px;">Criar nova senha</a>
+      </p>
+      <p style="margin:0 0 10px;font-size:13px;color:#6b4a3a;">O link vale por 1 hora e só pode ser usado uma vez. Se você pedir outro, este deixa de funcionar — use sempre o e-mail mais recente.</p>
+      <p style="margin:0;font-size:13px;color:#6b4a3a;">Não pediu para trocar a senha? É só ignorar este e-mail: nada muda na sua conta.</p>
+    </div>
+  </div>
+</div>

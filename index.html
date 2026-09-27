@@ -1136,8 +1136,7 @@ footer .brand-text .l1{color:#fff6e6;}
       </div>
       <div class="hero-stats">
         <div><div class="num" id="statCount">–</div><div class="lbl">Delícias no cardápio</div></div>
-        <div><div class="num">4.9★</div><div class="lbl">Avaliação dos clientes</div></div>
-        <div><div class="num">20min</div><div class="lbl">Tempo médio de preparo</div></div>
+        <div><div class="num" id="statTempo">~25min</div><div class="lbl">Tempo médio de preparo</div></div>
       </div>
     </div>
 
@@ -2763,6 +2762,7 @@ footer .brand-text .l1{color:#fff6e6;}
       storeWhatsappNumber = info.whatsapp || "";
       storeIsOpen = info.isOpen !== false;
       storePrepTime = Number(info.prepTime) || 25;
+      atualizarStatTempo();
       storeDeliveryTime = Number(info.deliveryTime) || 20;
       storeClosedMsg = info.closedMsg || "No momento estamos fechados. Confira nossos horários abaixo.";
       deliveryFee = Number(info.deliveryFee) || 0;
@@ -3239,6 +3239,14 @@ footer .brand-text .l1{color:#fff6e6;}
   // de verdade. Só troca o valor fixo se houver dado suficiente — com
   // poucas amostras, um preparo muito rápido ou muito lento distorceria
   // a previsão pro próximo cliente.
+  // Número do topo do site: média real dos últimos pedidos ou, sem dados
+  // suficientes, o tempo configurado no painel.
+  function atualizarStatTempo(){
+    const el = document.getElementById('statTempo');
+    if(!el) return;
+    const min = tempoPreparoReal || Number(storePrepTime) || 25;
+    el.textContent = '~' + min + 'min';
+  }
   function watchTempoPreparo(){
     try{
       db.collection('store').doc('tempoPreparo').onSnapshot((doc) => {
@@ -3247,6 +3255,7 @@ footer .brand-text .l1{color:#fff6e6;}
         if(amostras.length < 5) return;   // poucas amostras, mantém o valor padrão
         const media = amostras.reduce((s,n) => s+n, 0) / amostras.length;
         tempoPreparoReal = Math.round(media);
+        atualizarStatTempo();
       });
     }catch(e){ /* segue com o valor padrão */ }
   }

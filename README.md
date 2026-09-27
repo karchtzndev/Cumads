@@ -55,12 +55,23 @@ As telas usam uma API de documentos (coleção → documento → JSON). O arquiv
    `supabase/seed.sql` trocando o e-mail no final.
 4. Troque `supabaseUrl`/`supabaseKey` nos três `index.html` (procure `firebaseConfig`).
 
+### Tarefas automáticas
+
+- **Limpeza diária** (pg_cron, 4h de Brasília — `supabase/migrations/0004_limpeza_automatica.sql`):
+  apaga visitas com mais de 90 dias, erros com mais de 30, acessos com mais de 180,
+  chamadas da TV com mais de 30 e fila de impressão com mais de 7. Pedidos, clientes,
+  caixa, estatísticas e mensagens nunca são apagados.
+- **Manter ativo** (cron da Vercel, 1x por dia → `api/manter-ativo.js`): faz uma leitura
+  no banco para o Supabase gratuito não pausar o projeto por inatividade.
+
 ### Configurações recomendadas no painel do Supabase
 
 - **Authentication → URL Configuration → Site URL:** o endereço do site na Vercel
   (sem isso o link de "esqueci minha senha" aponta para `localhost`). Adicione também
   `https://SEU-SITE/gerencial/` em *Redirect URLs*.
 - **Authentication → Password security:** ligue *Leaked password protection*.
+- **Authentication → Emails → Reset Password:** cole o modelo em português de
+  `docs/email-recuperar-senha.html` (o assunto está no topo do arquivo).
 
 ## Deploy
 

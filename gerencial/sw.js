@@ -1,4 +1,4 @@
-const CACHE = "cumads-gerencial-v7";
+const CACHE = "cumads-gerencial-v8";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./mascot.jpg"];
 
 self.addEventListener('install', (e) => {
