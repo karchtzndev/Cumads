@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Cumad's Grill — Espetinhos na brasa</title>
+<title>Cumad's Grill | Jantinha em Anápolis</title>
+<meta name="description" content="Sabor de respeito no ponto certo! Espetinhos na brasa, jantinha, porções, cremes e pastéis em Anápolis. Retirada e consumo no local — terça a domingo, 19h às 23h.">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" href="/icon-192.png">
@@ -1132,9 +1133,9 @@ footer .brand-text .l1{color:#fff6e6;}
 <section class="hero">
   <div class="wrap hero-grid">
     <div>
-      <div class="eyebrow"><span class="star">★</span> ESPETINHOS NA BRASA <span class="star">★</span></div>
+      <div class="eyebrow"><span class="star">★</span> JANTINHA EM ANÁPOLIS <span class="star">★</span></div>
       <h1 class="hero-title"><span class="ht-script">Cumad's</span><span class="ht-grill">★ GRILL ★</span></h1>
-      <p class="hero-sub">Espetinhos assados na brasa, jantinha caprichada, porções pra dividir, cremes geladinhos e pastel na hora. Tudo feito pelas comadres com tempero de casa.</p>
+      <p class="hero-sub"><strong>Sabor de respeito no ponto certo!</strong> Espetinhos na brasa, jantinha caprichada, porções pra dividir, cremes geladinhos e pastel na hora. Retirada e consumo no local.</p>
       <div class="hero-actions">
         <a href="#cardapio" class="cta-btn">Ver cardápio →</a>
         <button class="btn-outline" id="heroTrackBtn">Acompanhar meu pedido</button>
@@ -1338,7 +1339,7 @@ footer .brand-text .l1{color:#fff6e6;}
         <label>Tipo de pedido</label>
         <div class="type-toggle">
           <button type="button" class="type-btn active" data-ordertype="entrega">🛵 Entrega</button>
-          <button type="button" class="type-btn" data-ordertype="retirada">🏠 Balcão</button>
+          <button type="button" class="type-btn" data-ordertype="retirada">🏠 Retirada</button>
           <button type="button" class="type-btn" data-ordertype="mesa">🪑 Mesa</button>
         </div>
       </div>
@@ -2350,6 +2351,16 @@ footer .brand-text .l1{color:#fff6e6;}
     }
   }
   let selectedOrderType = "entrega";
+  // Loja que não entrega: some a opção "Entrega" e o pedido já começa em Retirada
+  let entregaAtiva = true;
+  function aplicarModoEntrega(){
+    const btnE = document.querySelector('[data-ordertype="entrega"]');
+    if(btnE) btnE.style.display = entregaAtiva ? '' : 'none';
+    if(!entregaAtiva && selectedOrderType === 'entrega'){
+      const alvo = document.querySelector('[data-ordertype="retirada"]');
+      if(alvo) alvo.click();
+    }
+  }
   document.querySelectorAll('[data-ordertype]').forEach(btn => btn.addEventListener('click', () => {
     document.querySelectorAll('[data-ordertype]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -2781,6 +2792,8 @@ footer .brand-text .l1{color:#fff6e6;}
       if(info.instagram) document.getElementById('infoInstagram').textContent = info.instagram;
 
       storeWhatsappNumber = info.whatsapp || "";
+      entregaAtiva = info.delivery !== false;
+      aplicarModoEntrega();
       storeIsOpen = info.isOpen !== false;
       storePrepTime = Number(info.prepTime) || 25;
       atualizarStatTempo();

@@ -2222,6 +2222,12 @@ nav ul.nav-aberto a{color:var(--ink);}
           <div class="admin-list">
             <h3>🛵 Taxa de entrega</h3>
             <div class="field">
+              <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                <input type="checkbox" id="lojaDelivery" style="width:auto;">
+                Fazemos entrega (desmarcado = só retirada e consumo no local)
+              </label>
+            </div>
+            <div class="field">
               <label>Como funciona a sua entrega?</label>
               <select id="lojaFeeMode">
                 <option value="fixa">Valor fixo — eu cobro sempre o mesmo</option>
@@ -3989,6 +3995,7 @@ nav ul.nav-aberto a{color:var(--ink);}
       storeInfo = info;
       storeDeliveryFee = Number(info.deliveryFee) || 0;
       document.getElementById('lojaFeeMode').value = info.feeMode || 'fixa';
+      document.getElementById('lojaDelivery').checked = info.delivery !== false;
       document.getElementById('lojaFeeMsg').value = info.feeMsg || '';
       aplicarFeeMode();
       document.getElementById('lojaDeliveryFee').value = (info.deliveryFee !== undefined && info.deliveryFee !== null) ? info.deliveryFee : "";
@@ -4009,6 +4016,7 @@ nav ul.nav-aberto a{color:var(--ink);}
       ie: document.getElementById('lojaIe').value.trim(),
       prepTime: parseInt(document.getElementById('lojaPrepTime').value) || 25,
       deliveryTime: parseInt(document.getElementById('lojaDeliveryTime').value) || 20,
+      delivery: document.getElementById('lojaDelivery').checked,
       feeMode: document.getElementById('lojaFeeMode').value,
       feeMsg: document.getElementById('lojaFeeMsg').value.trim(),
       deliveryFee: parseFloat(document.getElementById('lojaDeliveryFee').value) || 0,
@@ -4201,11 +4209,11 @@ nav ul.nav-aberto a{color:var(--ink);}
     {n:5, nome:'Sexta-feira',   curto:'Sex'},
     {n:6, nome:'Sábado',        curto:'Sáb'}
   ];
-  // padrão do Cumad’s: quarta a domingo, 19h às 23h
+  // padrão do Cumad’s: terça a domingo, 19h às 23h
   const HORARIO_PADRAO = {
     0:{aberto:true,  abre:'19:00', fecha:'23:00'},
     1:{aberto:false, abre:'19:00', fecha:'23:00'},
-    2:{aberto:false, abre:'19:00', fecha:'23:00'},
+    2:{aberto:true,  abre:'19:00', fecha:'23:00'},
     3:{aberto:true,  abre:'19:00', fecha:'23:00'},
     4:{aberto:true,  abre:'19:00', fecha:'23:00'},
     5:{aberto:true,  abre:'19:00', fecha:'23:00'},
