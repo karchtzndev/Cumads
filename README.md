@@ -61,6 +61,10 @@ As telas usam uma API de documentos (coleção → documento → JSON). O arquiv
   apaga visitas com mais de 90 dias, erros com mais de 30, acessos com mais de 180,
   chamadas da TV com mais de 30 e fila de impressão com mais de 7. Pedidos, clientes,
   caixa, estatísticas e mensagens nunca são apagados.
+- **Abrir e fechar no horário** (pg_cron, a cada minuto — `0005_horario_automatico.sql`):
+  com o módulo "Abrir e fechar no horário" ligado, abre e fecha a loja pelos horários
+  cadastrados, sem precisar de painel aberto. Respeita quem abriu/fechou na mão até a
+  próxima virada.
 - **Manter ativo** (cron da Vercel, 1x por dia → `api/manter-ativo.js`): faz uma leitura
   no banco para o Supabase gratuito não pausar o projeto por inatividade.
 
@@ -76,6 +80,11 @@ As telas usam uma API de documentos (coleção → documento → JSON). O arquiv
 ## Deploy
 
 Vercel, projeto ligado a este repositório (branch `main`), Framework = *Other*, sem build.
+
+## Material impresso
+
+`docs/cartaz-qr-cumads.pdf`: página 1 é o cartaz A4 (balcão/fachada) e a página 2 tem
+4 cartões de mesa (A6) para cortar. O QR leva para `https://cumads.vercel.app/`.
 
 ## Cardápio e preços
 
