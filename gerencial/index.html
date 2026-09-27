@@ -9128,7 +9128,7 @@ nav ul.nav-aberto a{color:var(--ink);}
       setTimeout(() => { errEl.style.color = ""; errEl.textContent = ""; }, 12000);
     }catch(e){
       errEl.textContent = e.code === 'auth/too-many-requests'
-        ? "Muitos pedidos seguidos. Aguarde 1 minuto e use o último e-mail que chegou."
+        ? "Limite de e-mails atingido: o sistema só envia alguns e-mails de recuperação por hora. Se um e-mail já chegou, use o mais recente. Senão, tente de novo em até 1 hora — ou peça à gerente para definir uma nova senha pelo painel (Ajustes → Equipe → 🔑)."
         : "Não foi possível enviar. Confira o e-mail.";
     }
     // espera 60s antes de permitir outro envio
